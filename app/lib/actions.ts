@@ -3,7 +3,8 @@
 import { z } from 'zod';
 import { sql } from '@vercel/postgres'
 import { revalidatePath } from 'next/cache';
-const formDataSchema = z.object({
+import { redirect } from 'next/navigation';
+const FormSchema = z.object({
     id: z.string(),
     customerId: z.string(),
     amount: z.coerce.number(),
@@ -11,14 +12,16 @@ const formDataSchema = z.object({
     date: z.string()
 });
 
-const CreateInvoice = formDataSchema.omit({ id: true, date: true });
+const CreateInvoice = FormSchema.omit({ id: true, date: true });
 
 export async function createInvoice(formData: FormData) {
+    console.log('Creating invoice:', formData);
     const {customerId, amount, status} = CreateInvoice.parse({
         customerId: formData.get('customerId'),
         amount: formData.get('amount'),
         status: formData.get('status'),
     });
+    console.log('Creating invoice:', {customerId, amount, status});
     const amountInCents = Math.round(amount * 100);
     const date = new Date().toISOString().split('T')[0];
 
@@ -27,5 +30,6 @@ export async function createInvoice(formData: FormData) {
         VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
     `;
 
-    await revalidatePath('/dashboard/invoices');
+    revalidatePath('/dashboard/invoices');
+    redirect('/dashboard/invoices');
 }
